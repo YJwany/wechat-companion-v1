@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>微信伴侣 · 控制台</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --text:#e6e8ee; --dim:#8b93a7; --accent:#5b9cf8; --ok:#3ecf8e; --warn:#f0b429; --err:#f0605d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--text);display:flex;min-height:100vh;
+  }
+  /* 侧栏 */
+  nav{
+    width:180px;flex:0 0 180px;background:var(--panel);border-right:1px solid var(--line);
+    padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  }
+  nav h1{font-size:15px;padding:0 20px 16px;color:var(--text);font-weight:600}
+  nav h1 small{display:block;font-size:11px;color:var(--dim);font-weight:400;margin-top:2px}
+  nav a{
+    display:block;padding:9px 20px;color:var(--dim);text-decoration:none;font-size:13px;
+    border-left:2px solid transparent;cursor:pointer;
+  }
+  nav a:hover{color:var(--text);background:var(--panel2)}
+  nav a.on{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  /* 主体 */
+  main{flex:1;padding:28px 32px;max-width:1000px}
+  section{display:none}
+  section.on{display:block}
+  h2{font-size:19px;margin-bottom:6px;font-weight:600}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:20px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:18px 20px;margin-bottom:16px;
+  }
+  .card h3{font-size:13.5px;font-weight:600;margin-bottom:12px;color:var(--text);
+    display:flex;align-items:center;gap:8px}
+  .card h3 small{font-weight:400;color:var(--dim);font-size:11.5px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .row>div{flex:1;min-width:200px}
+  label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+  input,select,textarea{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;
+    color:var(--text);padding:8px 10px;font:inherit;font-size:13px;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{resize:vertical;min-height:70px;line-height:1.6}
+  button{
+    background:var(--accent);color:#fff;border:none;border-radius:6px;
+    padding:8px 16px;font:inherit;font-size:13px;cursor:pointer;
+  }
+  button:hover{filter:brightness(1.1)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;
+    font-size:11.5px;background:var(--panel2);border:1px solid var(--line);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .dot.ok{background:var(--ok)} .dot.err{background:var(--err)} .dot.warn{background:var(--warn)}
+  .stat{display:flex;gap:22px;flex-wrap:wrap}
+  .stat>div{min-width:80px}
+  .stat b{display:block;font-size:22px;font-weight:600;line-height:1.3}
+  .stat span{font-size:11.5px;color:var(--dim)}
+  .msg{font-size:12.5px;margin-top:10px;padding:8px 12px;border-radius:6px;display:none}
+  .msg.on{display:block}
+  .msg.ok{background:rgba(62,207,142,.1);color:var(--ok);border:1px solid rgba(62,207,142,.3)}
+  .msg.err{background:rgba(240,96,93,.1);color:var(--err);border:1px solid rgba(240,96,93,.3)}
+  .msg.warn{background:rgba(240,180,41,.1);color:var(--warn);border:1px solid rgba(240,180,41,.3)}
+  .list{max-height:460px;overflow-y:auto;font-size:12.5px}
+  .item{padding:10px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:none}
+  .item .meta{color:var(--dim);font-size:11px;margin-top:3px}
+  pre{
+    background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;
+    overflow-x:auto;font-size:12px;line-height:1.55;color:#c8d0e0;
+    font-family:Consolas,"Courier New",monospace;white-space:pre-wrap;word-break:break-word;
+  }
+  .hint{font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.5}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text);margin-bottom:8px}
+  .chk input{width:auto}
+  .sw{position:relative;display:inline-block;width:38px;height:21px;flex:0 0 38px}
+  .sw input{opacity:0;width:0;height:0}
+  .sw span{position:absolute;inset:0;background:var(--line);border-radius:21px;transition:.2s;cursor:pointer}
+  .sw span:before{content:"";position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked+span{background:var(--accent)}
+  .sw input:checked+span:before{transform:translateX(17px)}
+</style>
+</head>
+<body>
+<nav>
+  <h1>微信伴侣<small id="navStatus">连接中…</small></h1>
+  <a class="on" data-t="home">首页</a>
+  <a data-t="persona">她是谁</a>
+  <a data-t="brain">大脑</a>
+  <a data-t="world">她的世界</a>
+  <a data-t="memory">记忆</a>
+  <a data-t="behavior">相处</a>
+  <a data-t="tools">工具</a>
+  <a data-t="log">日志</a>
+</nav>
+
+<main>
+<!-- ══ 首页 ══ -->
+<section id="home" class="on">
+  <h2>首页</h2>
+  <p class="sub">她现在的状态</p>
+
+  <div class="card">
+    <h3>运行状态</h3>
+    <div class="stat" id="statBox"></div>
+    <div id="warnBox" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <h3>今天的她</h3>
+    <div id="todayBox" class="hint">加载中…</div>
+  </div>
+
+  <div class="card">
+    <h3>她现在的状态 <small>受压之后的短期状态，会随时间自己回落</small></h3>
+    <div id="deformBox" class="hint">加载中…</div>
+  </div>
+
+  <div class="card">
+    <h3>试聊 <small>不经过微信，直接看她怎么回</small></h3>
+    <textarea id="sayText" placeholder="跟她说一句话…"></textarea>
+    <div class="btns" style="margin-top:10px">
+      <button onclick="sendSay()">发给她</button>
+      <span class="hint" style="margin:0">发到你微信里（需要已经在微信跟她聊过一句）</span>
+    </div>
+    <div class="msg" id="sayMsg"></div>
+  </div>
+</section>
+
+<!-- ══ 她是谁 ══ -->
+<section id="persona">
+  <h2>她是谁</h2>
+  <p class="sub">改完点保存，立即生效</p>
+
+  <div class="card">
+    <h3>人设贴合 <small>写一段大致描述，自动补全成完整人设</small></h3>
+    <p class="hint" style="margin-top:0">
+      只用写你知道的，剩下的交给模型。比如「她叫阿梨，26岁，在成都做插画师，话不多有点慢热，喜欢猫和下雨天」——
+      <b>你写了的不会被改</b>，没写的它会合理补全。
+    </p>
+    <div class="row">
+      <div>
+        <label>你想要一个什么样的人</label>
+        <textarea id="forge_tpl" rows="3" placeholder="例：一个有点毒舌但心软的女生，在北京做程序员，喜欢熬夜打游戏"></textarea>
+      </div>
+    </div>
+    <div class="btns">
+      <button onclick="forgePersona()" id="forge_btn">生成人设</button>
+      <button class="ghost" onclick="document.getElementById('forge_tpl').value=''">清空</button>
+    </div>
+    <div class="msg" id="forgeMsg"></div>
+    <div id="forgeOut" class="hint"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div><label>名字</label><input id="p_name"></div>
+      <div><label>年龄</label><input id="p_age" type="number"></div>
+      <div><label>城市</label><input id="p_city"></div>
+    </div>
+    <div class="row">
+      <div><label>职业（一句话）</label><input id="p_job"></div>
+      <div><label>性格类型 MBTI</label><select id="p_mbti"></select></div>
+      <div><label>emoji 比例 0-100</label><input id="p_emoji" type="number" min="0" max="100"></div>
+    </div>
+    <div class="row"><div><label>背景故事</label><textarea id="p_bg"></textarea></div></div>
+    <div class="row"><div><label>说话方式（直接进提示词，影响很大）</label><textarea id="p_speech"></textarea></div></div>
+    <div class="row"><div><label>兴趣（逗号分隔）</label><input id="p_interests"></div></div>
+    <div class="btns"><button onclick="savePersona()">保存</button></div>
+    <div class="msg" id="personaMsg"></div>
+  </div>
+</section>
+
+<!-- ══ 大脑 ══ -->
+<section id="brain">
+  <h2>大脑</h2>
+  <p class="sub">先用免费模型跑通，随时可换付费的</p>
+
+  <div class="card">
+    <h3>对话模型 <small>她平时聊天用这个</small></h3>
+    <div class="row">
+      <div><label>服务商预设</label><select id="b_preset" onchange="applyPreset()"></select></div>
+      <div><label>模型名</label><input id="b_model"></div>
+    </div>
+    <div class="row">
+      <div><label>BaseURL</label><input id="b_baseurl"></div>
+      <div><label>API Key</label><input id="b_apikey" type="password" placeholder="粘贴你的 key"></div>
+    </div>
+    <div class="row">
+      <div><label>temperature 0-2</label><input id="b_temp" type="number" step="0.1" min="0" max="2"></div>
+      <div><label>最大回复长度</label><input id="b_maxtok" type="number"></div>
+    </div>
+    <div class="hint" id="presetHint"></div>
+    <div class="btns" style="margin-top:12px">
+      <button onclick="saveBrain()">保存</button>
+      <button class="ghost" onclick="testConn()">测连通</button>
+      <button class="ghost" onclick="testRunModel()">真跑一次</button>
+    </div>
+    <div class="msg" id="brainMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>世界引擎 <small>每晚替她写"明天"，建议用独立模型</small></h3>
+    <div class="chk"><label class="sw"><input type="checkbox" id="w_enabled"><span></span></label><span>启用世界引擎</span></div>
+    <div class="hint" style="margin-bottom:12px">不填下面这三项就复用对话模型（功能可用，但会跟聊天互相干扰）。</div>
+    <div class="row">
+      <div><label>BaseURL</label><input id="w_baseurl" placeholder="留空 = 复用对话模型"></div>
+      <div><label>模型名</label><input id="w_model" placeholder="留空 = 复用"></div>
+    </div>
+    <div class="row">
+      <div><label>API Key</label><input id="w_apikey" type="password" placeholder="留空 = 复用"></div>
+    </div>
+    <div class="row">
+      <div><label>城市（取真实天气）</label><input id="w_city"></div>
+      <div style="flex:0 0 200px">
+        <div class="chk" style="margin-top:24px"><label class="sw"><input type="checkbox" id="w_weather"><span></span></label><span>用真实天气</span></div>
+      </div>
+    </div>
+    <div class="btns"><button onclick="saveWorld()">保存</button></div>
+    <div class="msg" id="worldMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>识图 <small>她"看得见"你发的图片</small></h3>
+    <div class="chk"><label class="sw"><input type="checkbox" id="v_enabled"><span></span></label><span>启用识图</span></div>
+    <div class="hint" style="margin-bottom:12px">
+      对话模型通常不支持看图，这里单独配一个视觉模型就行（BaseURL / Key 留空即沿用对话接口那套）。<br>
+      实测可用：<code>Qwen/Qwen3-VL-30B-A3B-Instruct</code>（约 2 秒，描述准确）。
+      注意 <code>Qwen3-VL-32B</code> 在同一张测试图上会答"纯白背景"。
+    </div>
+    <div class="row">
+      <div><label>BaseURL</label><input id="v_baseurl" placeholder="留空 = 沿用对话接口"></div>
+      <div><label>模型名</label><input id="v_model" placeholder="比如 Qwen/Qwen3-VL-30B-A3B-Instruct"></div>
+    </div>
+    <div class="row">
+      <div><label>API Key</label><input id="v_apikey" type="password" placeholder="留空 = 沿用对话接口"></div>
+    </div>
+    <div class="btns">
+      <button onclick="saveVision()">保存</button>
+      <button onclick="testVision()">真跑一次（用她相册里的图试）</button>
+    </div>
+    <div class="msg" id="visionMsg"></div>
+  </div>
+</section>
+
+<!-- ══ 她的世界 ══ -->
+<section id="world">
+  <h2>她的世界</h2>
+  <p class="sub">她每晚替自己写下"明天" —— 这是她不像工具人的地方</p>
+
+  <div class="card">
+    <h3>世界引擎</h3>
+    <div class="btns">
+      <button onclick="runWorld()">现在就跑一次</button>
+      <span class="hint" style="margin:0">正常是每晚她睡着后自动跑，这里可以手动触发看效果</span>
+    </div>
+    <div class="msg" id="worldRunMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>明天的剧本</h3>
+    <div id="scriptBox" class="hint">还没有剧本</div>
+  </div>
+
+  <div class="card">
+    <h3>她的日记 <small>按天留档，永久保存</small></h3>
+    <div class="list" id="diaryList"></div>
+  </div>
+</section>
+
+<!-- ══ 记忆 ══ -->
+<section id="memory">
+  <h2>记忆</h2>
+  <p class="sub">她记得的事。久不提会变淡，但永不删除。</p>
+  <div class="card">
+    <div class="stat" id="memStat"></div>
+  </div>
+  <div class="card">
+    <h3>她记得的事</h3>
+    <div class="list" id="memList"></div>
+  </div>
+</section>
+
+<!-- ══ 相处 ══ -->
+<section id="behavior">
+  <h2>相处</h2>
+  <p class="sub">她回消息的节奏和分寸</p>
+  <div class="card">
+    <div class="row">
+      <div><label>回复速度</label><select id="bh_speed">
+        <option value="human">拟人（有反应时间和打字延迟）</option>
+        <option value="instant">秒回</option>
+        <option value="slow">慢热</option>
+      </select></div>
+      <div><label>一条回复最多拆成几条</label><input id="bh_chunk" type="number" min="1" max="6"></div>
+      <div><label>手滑打错字概率 0-10</label><input id="bh_typo" type="number" min="0" max="10"></div>
+    </div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="bh_typing"><span></span></label><span>显示"对方正在输入…"</span></div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="bh_sense"><span></span></label><span><b>发前常识自检</b>（发现"凌晨三点在银行"这种穿帮就让她改口，只在查出问题时才多调一次模型）</span></div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="bh_all"><span></span></label><span>回复所有人（关掉则只回名单里的人）</span></div>
+    <div class="row"><div><label>回复名单（逗号分隔，留空配合上面开关）</label><input id="bh_peers"></div></div>
+    <div class="row">
+      <div><label>她几点睡</label><input id="bh_qs" placeholder="23:30"></div>
+      <div><label>她几点起</label><input id="bh_qe" placeholder="07:30"></div>
+      <div><label>每日主动消息上限</label><input id="bh_limit" type="number"></div>
+    </div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="bh_paused"><span></span></label><span><b>急停</b>（勾上她立刻不回复任何消息）</span></div>
+    <div class="btns"><button onclick="saveBehavior()">保存</button></div>
+    <div class="msg" id="bhMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>主动消息</h3>
+    <div class="chk"><label class="sw"><input type="checkbox" id="pr_enabled"><span></span></label><span>允许她主动找你</span></div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="pr_morning"><span></span></label><span>早安</span></div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="pr_night"><span></span></label><span>晚安</span></div>
+    <div class="chk"><label class="sw"><input type="checkbox" id="pr_longing"><span></span></label><span>太久没聊会想他</span></div>
+    <div class="row"><div><label>多少小时没聊就开始想</label><input id="pr_after" type="number"></div></div>
+    <div class="btns"><button onclick="saveProactive()">保存</button></div>
+    <div class="msg" id="prMsg"></div>
+  </div>
+</section>
+
+<!-- ══ 工具 ══ -->
+<section id="tools">
+  <h2>工具</h2>
+  <p class="sub">运维与调试</p>
+  <div class="card">
+    <h3>她的相册（让她发照片给你）</h3>
+    <p class="hint">把真实照片放进 <code>data/photos/</code>，文件名写清楚内容（比如「团子在窗台.jpg」），
+      她会自己挑一张、配一句话发给你。文件名就是她"看到"的东西。</p>
+    <div id="albumBox" class="hint">正在读取相册…</div>
+    <div class="row">
+      <div><label>优先挑含这个关键词的（可留空）</label><input id="ph_prefer" placeholder="比如：猫 / 书店 / 雨"></div>
+      <div><label>指定配文（可留空，让她自己想）</label><input id="ph_note" placeholder="留空更自然"></div>
+    </div>
+    <div class="btns"><button onclick="sendPhoto()">让她发一张给我</button></div>
+    <div class="msg" id="phMsg"></div>
+  </div>
+  <div class="card">
+    <h3>她的表情包 <small>她会自己在聊天里挑一个发</small></h3>
+    <p class="hint">把表情包图片放进 <code>data/stickers/</code>，<b>文件名就是名字</b>。
+      她会自己挑一个发，记不准名字也能模糊匹配上。建议 240×240 左右的方形图。</p>
+    <div id="stickerBox" class="hint">正在读取…</div>
+    <div class="row">
+      <div><label>让她现在发一个（可留空 = 随机）</label><input id="st_name" placeholder="比如：晚安猫"></div>
+    </div>
+    <div class="btns">
+      <button onclick="sendSticker()">发一个给我</button>
+      <button onclick="loadStickers()">刷新</button>
+    </div>
+    <div class="msg" id="stMsg"></div>
+  </div>
+  <div class="card">
+    <h3>她答应过的事 <small>说出口的承诺会记下来，到点自己提</small></h3>
+    <p class="hint">她说"我明天告诉你"这类话时会被记进承诺账本。到期后她会主动提起，
+      每条只提一次；拖过 3 天就不再提了（真人也会忘掉小事）。</p>
+    <div id="promiseStats" class="hint">正在读取…</div>
+    <div id="promiseBox"></div>
+    <div class="btns"><button onclick="loadPromises()">刷新</button></div>
+  </div>
+  <div class="card">
+    <h3>朋友圈文案（发给你，不做真实发布）</h3>
+    <div class="row"><div><label>主题（可留空，让她自己找）</label><input id="m_topic" placeholder="比如：店里来了只猫"></div></div>
+    <div class="btns"><button onclick="makeMoment()">让她写一条并发给我</button></div>
+    <div class="msg" id="mMsg"></div>
+  </div>
+  <div class="card">
+    <h3>自动备份 <small>她的记忆丢了就找不回来，所以每天存一份</small></h3>
+    <p class="hint" style="margin-top:0">
+      备份放在项目里的 <code>backups/</code>，跟着文件夹一起搬走。
+    </p>
+    <div class="row">
+      <div><label>保留几天（0 = 关掉自动备份）</label><input id="bk_days" type="number" min="0" max="365"></div>
+    </div>
+    <div id="backupBox" class="hint">读取中…</div>
+    <div class="btns" style="margin-top:10px">
+      <button onclick="saveBackup()">保存设置</button>
+      <button onclick="runBackup()">立刻备份一次</button>
+      <button class="ghost" onclick="loadBackup()">刷新</button>
+    </div>
+    <div class="msg" id="backupMsg"></div>
+  </div>
+  <div class="card">
+    <h3>路径</h3>
+    <div id="pathBox" class="hint"></div>
+  </div>
+</section>
+
+<!-- ══ 日志 ══ -->
+<section id="log">
+  <h2>日志</h2>
+  <p class="sub">最近 200 行</p>
+  <div class="card">
+    <div class="btns" style="margin-bottom:12px"><button class="ghost" onclick="loadLog()">刷新</button></div>
+    <pre id="logBox">加载中…</pre>
+  </div>
+</section>
+</main>
+
+<script>
+let CFG = null, PRESETS = {};
+
+// ── 导航 ──
+document.querySelectorAll('nav a').forEach(a => a.onclick = () => {
+  document.querySelectorAll('nav a').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('section').forEach(x => x.classList.remove('on'));
+  a.classList.add('on');
+  document.getElementById(a.dataset.t).classList.add('on');
+  if (a.dataset.t === 'world') loadWorld();
+  if (a.dataset.t === 'memory') loadMemory();
+  if (a.dataset.t === 'log') loadLog();
+});
+
+// ── 通用 ──
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+  return data;
+}
+function flash(id, text, kind) {
+  const el = document.getElementById(id);
+  el.className = 'msg on ' + (kind || 'ok');
+  el.textContent = text;
+  if (kind !== 'err') setTimeout(() => { el.className = 'msg'; }, 4000);
+}
+function busy(fn) { return async (...a) => { try { await fn(...a); } catch (e) { console.error(e); } }; }
+
+// ── 加载配置 ──
+async function loadConfig() {
+  const d = await api('/api/config');
+  CFG = d.config; PRESETS = d.presets;
+
+  const presetSel = document.getElementById('b_preset');
+  presetSel.innerHTML = Object.entries(PRESETS)
+    .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+  presetSel.value = CFG.brain.provider || 'custom';
+
+  document.getElementById('p_mbti').innerHTML =
+    d.mbti.map(m => `<option value="${m}">${m}</option>`).join('');
+
+  // 她是谁
+  set('p_name', CFG.persona.name); set('p_age', CFG.persona.age);
+  set('p_city', CFG.persona.city); set('p_job', CFG.persona.job);
+  set('p_mbti', CFG.persona.mbti); set('p_emoji', CFG.persona.emojiRate);
+  set('p_bg', CFG.persona.background); set('p_speech', CFG.persona.speechStyle);
+  set('p_interests', (CFG.persona.interests || []).join('，'));
+
+  // 大脑
+  set('b_model', CFG.brain.model); set('b_baseurl', CFG.brain.baseUrl);
+  set('b_apikey', CFG.brain.apiKey); set('b_temp', CFG.brain.temperature);
+  set('b_maxtok', CFG.brain.maxTokens);
+  chk('w_enabled', CFG.world.enabled);
+  set('w_baseurl', CFG.world.baseUrl); set('w_model', CFG.world.model);
+  set('w_apikey', CFG.world.apiKey); set('w_city', CFG.world.city);
+  chk('w_weather', CFG.world.weatherReal);
+  chk('v_enabled', (CFG.vision || {}).enabled !== false);
+  set('v_baseurl', (CFG.vision || {}).baseUrl);
+  set('v_model', (CFG.vision || {}).model);
+  set('v_apikey', (CFG.vision || {}).apiKey);
+  showPresetHint();
+
+  // 相处
+  set('bh_speed', CFG.behavior.replySpeed); set('bh_chunk', CFG.behavior.chunkMax);
+  set('bh_typo', CFG.behavior.typoRate); chk('bh_typing', CFG.behavior.typingIndicator);
+  chk('bh_sense', CFG.behavior.commonSenseCheck !== false);
+  chk('bh_all', CFG.behavior.replyToAll);
+  set('bh_peers', (CFG.behavior.allowedPeers || []).join(','));
+  set('bh_qs', CFG.behavior.quietHours.start); set('bh_qe', CFG.behavior.quietHours.end);
+  set('bh_limit', CFG.behavior.proactiveDailyLimit); chk('bh_paused', CFG.behavior.paused);
+
+  chk('pr_enabled', CFG.proactive.enabled); chk('pr_morning', CFG.proactive.morningGreeting);
+  chk('pr_night', CFG.proactive.nightGreeting); chk('pr_longing', CFG.proactive.longing);
+  set('pr_after', CFG.proactive.longingAfterHours);
+}
+function set(id, v) { const e = document.getElementById(id); if (e) e.value = v ?? ''; }
+function val(id) { return document.getElementById(id).value; }
+function chk(id, v) { const e = document.getElementById(id); if (e) e.checked = !!v; }
+function isChk(id) { return document.getElementById(id).checked; }
+
+function applyPreset() {
+  const p = PRESETS[val('b_preset')];
+  if (!p) return;
+  if (p.baseUrl) set('b_baseurl', p.baseUrl);
+  if (p.model) set('b_model', p.model);
+  showPresetHint();
+}
+function showPresetHint() {
+  const p = PRESETS[val('b_preset')];
+  const el = document.getElementById('presetHint');
+  if (!p) { el.textContent = ''; return; }
+  el.innerHTML = p.note + (p.keyUrl ? ` 申请 key：<a href="${p.keyUrl}" target="_blank" style="color:var(--accent)">${p.keyUrl}</a>` : '');
+}
+
+// ── 状态 ──
+async function loadStatus() {
+  const s = await api('/api/status');
+  const nav = document.getElementById('navStatus');
+  if (s.running) { nav.innerHTML = '<span class="dot ok"></span> 运行中'; }
+  else if (s.bound) { nav.innerHTML = '<span class="dot warn"></span> 已绑定，未运行'; }
+  else { nav.innerHTML = '<span class="dot err"></span> 未绑定'; }
+
+  document.getElementById('statBox').innerHTML = `
+    <div><b>${s.running ? '运行中' : '已停止'}</b><span>状态</span></div>
+    <div><b>${s.bound ? '已绑定' : '未绑定'}</b><span>微信</span></div>
+    <div><b>${s.name || '-'}</b><span>她叫</span></div>
+    <div><b>${s.memory?.total ?? 0}</b><span>记忆条数</span></div>
+    <div><b>${s.proactiveUsedToday ?? 0}/${s.proactiveLimit ?? 0}</b><span>今日主动</span></div>
+  `;
+
+  const w = [];
+  if (s.worldDegraded) w.push('⚠️ 世界引擎在用对话模型的槽位，建议在「大脑」页给它单独配一个模型');
+  if (s.paused) w.push('⏸ 急停已开启，她现在不会回复任何消息');
+  if (s.bound && !s.running) w.push('ℹ️ 已绑定但服务没在跑，运行 npm start');
+  if (!s.bound) w.push('ℹ️ 还没绑定微信，运行 npm run login 扫码');
+  document.getElementById('warnBox').innerHTML = w.map(x => `<div class="hint">${x}</div>`).join('');
+
+  if (s.daily) {
+    document.getElementById('todayBox').innerHTML = `
+      <div>作息：<b>${s.daily.wakeAt} 起</b> / <b>${s.daily.sleepAt} 睡</b></div>
+      <div>心情：<b>${s.daily.mood || '-'}</b></div>
+      ${s.daily.focus ? `<div>一直想着：${s.daily.focus}</div>` : ''}
+      ${s.daily.flow ? `<div>今天：${s.daily.flow}</div>` : ''}
+      <div class="meta" style="color:var(--dim);margin-top:6px;font-size:11px">
+        ${s.daily.fromWorld ? '🌍 来自世界引擎剧本' : '🎲 随机兜底（世界引擎还没跑过）'}
+      </div>`;
+  }
+
+  // 她现在的状态（变形状态机）
+  const d = s.deform;
+  if (d) {
+    const t = d.thresholds || {};
+    const tone = { calm: 'var(--ok, #4a4)', grip: '#c90', loop: '#e60', shadow: 'var(--err, #c33)' }[d.layer] || 'inherit';
+    const recent = (d.recent || []).slice(-6).reverse()
+      .map((r) => `<div class="meta" style="font-size:11px;color:var(--dim)">
+        ${r.delta > 0 ? '+' : ''}${r.delta} ${({ rude: '被凶', warm: '被哄', terse: '被敷衍', ignored: '被无视', reunion: '你消失太久' })[r.kind] || r.kind}
+      </div>`).join('');
+    document.getElementById('deformBox').innerHTML = `
+      <div>现在是：<b style="color:${tone}">${d.label}</b>
+        <span class="meta" style="color:var(--dim)">（压力 ${d.pressure}）</span></div>
+      <div class="meta" style="color:var(--dim);font-size:11px;margin-top:4px">
+        三档线：抓紧 ${t.gripPressure ?? '-'} / 反复 ${t.loopPressure ?? '-'} / 收起 ${t.shadowPressure ?? '-'}
+      </div>
+      ${d.layer === 'calm'
+        ? '<div class="hint" style="margin-top:6px">她现在是正常的。压力每小时自己掉 6 点，所以生气不会过夜。</div>'
+        : `<div class="hint" style="margin-top:6px">她受压了。哄她会掉得比涨得快，放着不管一天也会自己平。</div>`}
+      ${recent ? `<div style="margin-top:8px"><b style="font-size:12px">最近发生了什么</b>${recent}</div>` : ''}`;
+  }
+}
+
+// ── 保存 ──
+async function save(partial, msgId) {
+  const merged = JSON.parse(JSON.stringify(CFG));
+  deepAssign(merged, partial);
+  await api('/api/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(merged),
+  });
+  CFG = merged;
+  flash(msgId, '✓ 已保存，立即生效');
+}
+function deepAssign(t, s) {
+  for (const k of Object.keys(s)) {
+    if (s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) {
+      t[k] = t[k] || {}; deepAssign(t[k], s[k]);
+    } else t[k] = s[k];
+  }
+}
+
+const savePersona = busy(() => save({ persona: {
+  name: val('p_name'), age: Number(val('p_age')), city: val('p_city'), job: val('p_job'),
+  mbti: val('p_mbti'), emojiRate: Number(val('p_emoji')), background: val('p_bg'),
+  speechStyle: val('p_speech'),
+  interests: val('p_interests').split(/[，,]/).map(s => s.trim()).filter(Boolean),
+}}, 'personaMsg'));
+
+const saveBrain = busy(() => save({ brain: {
+  provider: val('b_preset'), model: val('b_model'), baseUrl: val('b_baseurl'),
+  apiKey: val('b_apikey'), temperature: Number(val('b_temp')), maxTokens: Number(val('b_maxtok')),
+}}, 'brainMsg'));
+
+const saveWorld = busy(() => save({ world: {
+  enabled: isChk('w_enabled'), baseUrl: val('w_baseurl'), model: val('w_model'),
+  apiKey: val('w_apikey'), city: val('w_city'), weatherReal: isChk('w_weather'),
+}}, 'worldMsg'));
+
+const saveVision = busy(() => save({ vision: {
+  enabled: isChk('v_enabled'), baseUrl: val('v_baseurl'),
+  model: val('v_model'), apiKey: val('v_apikey'),
+}}, 'visionMsg'));
+
+const testVision = busy(async () => {
+  flash('visionMsg', '正在让她看一张图…', 'warn');
+  try {
+    const r = await api('/api/vision/test', { method: 'POST' });
+    flash('visionMsg', `✓ 她看到：${r.description}`);
+  } catch (e) { flash('visionMsg', '✗ ' + e.message, 'err'); }
+});
+
+const saveBehavior = busy(() => save({ behavior: {
+  replySpeed: val('bh_speed'), chunkMax: Number(val('bh_chunk')), typoRate: Number(val('bh_typo')),
+  typingIndicator: isChk('bh_typing'), replyToAll: isChk('bh_all'),
+  commonSenseCheck: isChk('bh_sense'),
+  allowedPeers: val('bh_peers').split(/[,，]/).map(s => s.trim()).filter(Boolean),
+  quietHours: { start: val('bh_qs'), end: val('bh_qe') },
+  proactiveDailyLimit: Number(val('bh_limit')), paused: isChk('bh_paused'),
+}}, 'bhMsg'));
+
+const saveProactive = busy(() => save({ proactive: {
+  enabled: isChk('pr_enabled'), morningGreeting: isChk('pr_morning'),
+  nightGreeting: isChk('pr_night'), longing: isChk('pr_longing'),
+  longingAfterHours: Number(val('pr_after')),
+}}, 'prMsg'));
+
+// ── 测试 ──
+const testConn = busy(async () => {
+  flash('brainMsg', '测试中…', 'warn');
+  const r = await api('/api/test/connection', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slot: currentBrainSlot() }),
+  });
+  flash('brainMsg', (r.ok ? '✓ ' : '✗ ') + r.message, r.ok ? 'ok' : 'err');
+});
+const testRunModel = busy(async () => {
+  flash('brainMsg', '真实请求中，可能等几秒…', 'warn');
+  const r = await api('/api/test/run', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slot: currentBrainSlot() }),
+  });
+  flash('brainMsg', (r.ok ? '✓ ' : '✗ ') + r.message + (r.detail ? `\n她说：${r.detail}` : ''), r.ok ? 'ok' : 'err');
+});
+function currentBrainSlot() {
+  return {
+    baseUrl: val('b_baseurl'), apiKey: val('b_apikey'), model: val('b_model'),
+    temperature: Number(val('b_temp')), maxTokens: Number(val('b_maxtok')),
+  };
+}
+
+// ── 试聊 ──
+const sendSay = busy(async () => {
+  const text = val('sayText').trim();
+  if (!text) return;
+  flash('sayMsg', '发送中…', 'warn');
+  await api('/api/say', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  flash('sayMsg', '✓ 已发到她微信里');
+  set('sayText', '');
+});
+
+// ── 世界 ──
+async function loadWorld() {
+  const d = await api('/api/diary');
+  const box = document.getElementById('diaryList');
+  if (!d.diaries.length) {
+    box.innerHTML = '<div class="hint">还没有日记。运行一次世界引擎，或等今晚自动跑。</div>';
+  } else {
+    box.innerHTML = d.diaries.map(x => `
+      <div class="item">
+        <div>${x.content.split('\n').slice(6).join('\n').trim().slice(0, 200)}</div>
+        <div class="meta">${x.date}</div>
+      </div>`).join('');
+  }
+
+  const keys = Object.keys(d.scripts || {}).sort();
+  const next = keys[keys.length - 1];
+  const s = next ? d.scripts[next] : null;
+  document.getElementById('scriptBox').innerHTML = s ? `
+    <div>生效日期：<b>${s.forDate}</b>${s.degraded ? ' <span class="pill"><span class="dot warn"></span>复用对话模型</span>' : ''}</div>
+    <div style="margin-top:8px">作息：<b>${s.wakeAt}</b> 起 / <b>${s.sleepAt}</b> 睡</div>
+    <div>心情：<b>${s.mood}</b></div>
+    <div>天气：${s.weather || '-'}</div>
+    <div>一直想着：${s.focus || '-'}</div>
+    <div>今天：${s.flow || '-'}</div>
+    <div>念头：${s.thoughts || '-'}</div>
+    <div>社交圈：${(s.npcs || []).map(n => n.name + '(' + n.relation + ')').join('、') || '-'}</div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;color:var(--accent)">看她今晚写的日记</summary>
+      <pre style="margin-top:8px">${esc(s.diary || '')}</pre></details>
+  ` : '<div class="hint">还没有剧本。点上面「现在就跑一次」。</div>';
+}
+
+const runWorld = busy(async () => {
+  flash('worldRunMsg', '世界引擎运行中，可能要 10-60 秒…', 'warn');
+  try {
+    const r = await api('/api/world/run', { method: 'POST' });
+    flash('worldRunMsg', `✓ 完成，明天 ${r.script.wakeAt} 起，心情「${r.script.mood}」`);
+    loadWorld(); loadStatus();
+  } catch (e) {
+    flash('worldRunMsg', '✗ ' + e.message, 'err');
+  }
+});
+
+// ── 记忆 ──
+async function loadMemory() {
+  const d = await api('/api/memory');
+  const b = d.stats.byBucket || {};
+  document.getElementById('memStat').innerHTML = `
+    <div><b>${d.stats.total}</b><span>总计</span></div>
+    <div><b>${b.fade || 0}</b><span>会淡忘</span></div>
+    <div><b>${b.solid || 0}</b><span>固化</span></div>
+    <div><b>${b.self || 0}</b><span>她自己的话</span></div>
+  `;
+  const box = document.getElementById('memList');
+  box.innerHTML = d.entries.length ? d.entries.map(e => `
+    <div class="item">
+      <div>${esc(e.text)}</div>
+      <div class="meta">${bucketName(e.bucket)} · 记于 ${(e.createdAt || '').slice(0, 16).replace('T', ' ')} · 想起过 ${e.hits || 0} 次</div>
+    </div>`).join('') : '<div class="hint">还没有记忆。跟她聊几句，她会开始记住事情。</div>';
+}
+function bucketName(b) { return { fade: '会淡忘', solid: '固化', self: '她自己的话' }[b] || b; }
+
+// ── 工具 ──
+const sendPhoto = busy(async () => {
+  flash('phMsg', '她正在挑照片…', 'warn');
+  try {
+    const r = await api('/api/album/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefer: val('ph_prefer'), note: val('ph_note') }),
+    });
+    flash('phMsg', `✓ 已发到你微信：${r.photo}${r.caption ? ' + "' + r.caption + '"' : ''}`);
+    loadAlbum();
+  } catch (e) { flash('phMsg', '✗ ' + e.message, 'err'); }
+});
+
+async function loadAlbum() {
+  try {
+    const d = await api('/api/album');
+    const box = document.getElementById('albumBox');
+    if (!d.count) {
+      box.innerHTML = `相册是空的。把照片放进 <code>${d.dir}</code> 就能用了。`
+        + `<br><span class="hint">建议放真实的日常照片（书店、猫、咖啡、窗外的雨），比生成的图有生活感。</span>`;
+      return;
+    }
+    box.innerHTML = `共 <b>${d.count}</b> 张（${d.totalMB}MB）：
+      ${d.photos.map((p) => `<code>${p.name}</code>`).join(' · ')}
+      <br><span class="hint">目录：${d.dir}</span>`;
+  } catch (e) {
+    document.getElementById('albumBox').textContent = '读取相册失败: ' + e.message;
+  }
+}
+
+async function loadStickers() {
+  try {
+    const d = await api('/api/stickers');
+    const box = document.getElementById('stickerBox');
+    if (!d.count) {
+      box.className = 'hint';
+      box.innerHTML = `表情包库是空的。把图放进 <code>${d.dir}</code> 就行，
+        <b>文件名就是她用的名字</b>（比如「晚安.png」）。<br>
+        想一次装一批现成的：在项目目录跑 <code>npm run fetch:stickers</code>（99 张，猫 / 可爱女生 / 开心鸭 这些）。`;
+      return;
+    }
+    box.className = '';
+    const anim = d.animated ? `，其中 <b>${d.animated}</b> 个会动` : '';
+    const mis = (d.mismatched && d.mismatched.length)
+      ? `<br><span style="color:var(--warn,#c90)">⚠ 这 ${d.mismatched.length} 个文件的后缀名和真实内容对不上，
+         发送时会按真实类型处理，但建议改名：${d.mismatched.map((f) => `<code>${f}</code>`).join(' · ')}</span>`
+      : '';
+    box.innerHTML = `共 <b>${d.count}</b> 个（${d.totalKB}KB）${anim}：
+      ${d.names.map((n) => `<code>${n}</code>`).join(' · ')}
+      <br><span class="hint">目录：${d.dir}</span>${mis}`;
+  } catch (e) {
+    document.getElementById('stickerBox').textContent = '读取失败: ' + e.message;
+  }
+}
+
+const sendSticker = busy(async () => {
+  flash('stMsg', '发送中…', 'warn');
+  try {
+    const r = await api('/api/stickers/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: val('st_name') }),
+    });
+    flash('stMsg', `✓ 已发「${r.sent}」到你微信`);
+  } catch (e) { flash('stMsg', '✗ ' + e.message, 'err'); }
+});
+
+// ── 人设贴合 ──
+// 生成结果**只填进表单**，不直接写配置 —— 你改完自己点「保存」。
+// 自动覆盖人设是越权的事，哪怕生成得再好。
+const forgePersona = busy(async () => {
+  const tpl = val('forge_tpl').trim();
+  if (tpl.length < 4) { flash('forgeMsg', '多写两句吧，太短了模型没法补', 'warn'); return; }
+  flash('forgeMsg', '生成中…（大约 3-5 秒）', 'warn');
+  document.getElementById('forgeOut').innerHTML = '';
+  try {
+    const r = await api('/api/persona/forge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: tpl }),
+    });
+    const p = r.persona;
+    // 填进上面的表单，用户可以直接改
+    set('p_name', p.name); set('p_age', p.age); set('p_city', p.city);
+    set('p_job', p.job); set('p_mbti', p.mbti); set('p_emoji', p.emojiRate);
+    set('p_bg', p.background); set('p_speech', p.speechStyle);
+    set('p_interests', (p.interests || []).join('，'));
+
+    let html = '<b>已填进下面的表单，确认后点「保存」生效。</b>';
+    if (r.overrides && r.overrides.length) {
+      html += `<div class="msg err" style="margin-top:8px">⚠ 有两处和你写的不一致：<br>`
+        + r.overrides.map((o) => '· ' + o).join('<br>') + '</div>';
+    }
+    if (r.warnings && r.warnings.length) {
+      html += `<div class="msg warn" style="margin-top:6px">生成时的修正：${r.warnings.join('；')}</div>`;
+    }
+    document.getElementById('forgeOut').innerHTML = html;
+    flash('forgeMsg', '✓ 生成完成', 'ok');
+  } catch (e) {
+    flash('forgeMsg', '✗ ' + e.message, 'err');
+  }
+});
+
+// ── 自动备份 ──
+async function loadBackup() {
+  try {
+    const d = await api('/api/backup');
+    set('bk_days', d.keepDays);
+    const box = document.getElementById('backupBox');
+    if (!d.count) {
+      box.innerHTML = `还没有任何备份。保留 <b>${d.keepDays}</b> 天，每天自动存一份。`
+        + `<br><span class="hint">目录：<code>${d.dir}</code></span>`;
+      return;
+    }
+    const rows = d.items.map((b) => `<code>${b.name}</code>（${b.files} 个文件，${b.mb}MB）`).join('<br>');
+    box.innerHTML = `已有 <b>${d.count}</b> 份，共 <b>${d.totalMB}</b>MB，保留 <b>${d.keepDays}</b> 天`
+      + `<br>${rows}`
+      + `<br><span class="hint">目录：<code>${d.dir}</code></span>`;
+  } catch (e) {
+    document.getElementById('backupBox').textContent = '读取失败: ' + e.message;
+  }
+}
+
+const runBackup = busy(async () => {
+  flash('backupMsg', '备份中…', 'warn');
+  try {
+    const r = await api('/api/backup/run', { method: 'POST' });
+    flash('backupMsg', `✓ 已备份 ${r.files} 个文件 → ${r.target.split(/[\\/]/).pop()}`);
+    loadBackup();
+  } catch (e) { flash('backupMsg', '✗ ' + e.message, 'err'); }
+});
+
+const saveBackup = busy(() => save({ system: {
+  backupKeepDays: Math.max(0, Number(val('bk_days')) || 0),
+} }, 'backupMsg'));
+
+async function loadPromises() {  try {
+    const d = await api('/api/promises');
+    const s = d.stats || {};
+    document.getElementById('promiseStats').innerHTML =
+      `共记下 <b>${s.total || 0}</b> 条 · 待兑现 <b>${s.pending || 0}</b> · 已提起 <b>${s.kept || 0}</b> · 已过期 <b>${s.expired || 0}</b>`;
+    const box = document.getElementById('promiseBox');
+    if (!d.items || !d.items.length) {
+      box.innerHTML = '<div class="hint">还没有记录。她说了"我明天告诉你"这类话就会自动记下来。</div>';
+      box.className = 'hint';
+      return;
+    }
+    box.className = '';
+    box.innerHTML = d.items.map((it) => {
+      const when = String(it.madeAt || '').slice(5, 16).replace('T', ' ');
+      const status = it.mentionedAt ? '✓ 已提起'
+        : (it.expired ? '— 已过期（不再提）' : '⏳ 待兑现');
+      return `<div style="padding:6px 0;border-bottom:1px solid #eee">
+        <div>${it.text}</div>
+        <div class="hint">${when} 说的 · ${status}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('promiseStats').textContent = '读取失败: ' + e.message;
+  }
+}
+
+const makeMoment = busy(async () => {  flash('mMsg', '让她想想…', 'warn');
+  try {
+    const r = await api('/api/moment', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: val('m_topic') }),
+    });
+    flash('mMsg', '✓ 已发到你微信：' + r.text);
+  } catch (e) { flash('mMsg', '✗ ' + e.message, 'err'); }
+});
+
+async function loadPaths() {
+  const d = await api('/api/restart-hint');
+  document.getElementById('pathBox').innerHTML =
+    `项目目录：${d.root}<br>数据目录：${d.data}<br><br>` +
+    `config.json 配置 · memory.json 记忆 · world.json 剧本 · diary/ 日记 · inbox/ 收到的媒体`;
+}
+
+// ── 日志 ──
+async function loadLog() {
+  const d = await api('/api/log');
+  document.getElementById('logBox').textContent = d.lines.length ? d.lines.join('\n') : '(空)';
+  const box = document.getElementById('logBox');
+  box.scrollTop = box.scrollHeight;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// ── 启动 ──
+(async () => {
+  await loadConfig();
+  await loadStatus();
+  await loadPaths();
+  await loadAlbum();
+  await loadPromises();
+  await loadStickers();
+  loadBackup();
+  setInterval(loadStatus, 5000);
+})();
+</script>
+</body>
+</html>

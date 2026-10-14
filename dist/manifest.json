@@ -1,0 +1,351 @@
+{
+  "generatedAt": "2026-10-14T05:19:53.714Z",
+  "fileCount": 86,
+  "totalBytes": 622410,
+  "files": [
+    {
+      "path": ".gitignore",
+      "size": 429
+    },
+    {
+      "path": "docs/GAP-ANALYSIS.md",
+      "size": 7885
+    },
+    {
+      "path": "package.json",
+      "size": 991
+    },
+    {
+      "path": "README.md",
+      "size": 25120
+    },
+    {
+      "path": "scripts/doctor.js",
+      "size": 5737
+    },
+    {
+      "path": "scripts/eval-models.js",
+      "size": 3730
+    },
+    {
+      "path": "scripts/fetch-stickers.js",
+      "size": 13567
+    },
+    {
+      "path": "scripts/login-interactive.js",
+      "size": 5792
+    },
+    {
+      "path": "scripts/pack.js",
+      "size": 5457
+    },
+    {
+      "path": "scripts/pick-vision-model.js",
+      "size": 1890
+    },
+    {
+      "path": "scripts/run-all-tests.js",
+      "size": 5424
+    },
+    {
+      "path": "scripts/run-core-tests.js",
+      "size": 2614
+    },
+    {
+      "path": "scripts/send-test-image.js",
+      "size": 1783
+    },
+    {
+      "path": "scripts/test-backup.js",
+      "size": 5380
+    },
+    {
+      "path": "scripts/test-commands.js",
+      "size": 4596
+    },
+    {
+      "path": "scripts/test-deform-wire.js",
+      "size": 8997
+    },
+    {
+      "path": "scripts/test-deform.js",
+      "size": 7893
+    },
+    {
+      "path": "scripts/test-drift.js",
+      "size": 4120
+    },
+    {
+      "path": "scripts/test-e2e-chat.js",
+      "size": 1617
+    },
+    {
+      "path": "scripts/test-forge-live.js",
+      "size": 2861
+    },
+    {
+      "path": "scripts/test-forge.js",
+      "size": 10564
+    },
+    {
+      "path": "scripts/test-hints-combo.js",
+      "size": 2835
+    },
+    {
+      "path": "scripts/test-history-persist.js",
+      "size": 1901
+    },
+    {
+      "path": "scripts/test-image-item.js",
+      "size": 1965
+    },
+    {
+      "path": "scripts/test-live.js",
+      "size": 1931
+    },
+    {
+      "path": "scripts/test-longing.js",
+      "size": 3754
+    },
+    {
+      "path": "scripts/test-memory-quality.js",
+      "size": 1520
+    },
+    {
+      "path": "scripts/test-memory.js",
+      "size": 2410
+    },
+    {
+      "path": "scripts/test-milestones.js",
+      "size": 3859
+    },
+    {
+      "path": "scripts/test-photo.js",
+      "size": 2293
+    },
+    {
+      "path": "scripts/test-portrait-live.js",
+      "size": 3198
+    },
+    {
+      "path": "scripts/test-portrait.js",
+      "size": 5583
+    },
+    {
+      "path": "scripts/test-proactive.js",
+      "size": 1704
+    },
+    {
+      "path": "scripts/test-promise-live.js",
+      "size": 858
+    },
+    {
+      "path": "scripts/test-promises.js",
+      "size": 3792
+    },
+    {
+      "path": "scripts/test-qrcode.js",
+      "size": 3144
+    },
+    {
+      "path": "scripts/test-relay.js",
+      "size": 6081
+    },
+    {
+      "path": "scripts/test-repeat-live.js",
+      "size": 3178
+    },
+    {
+      "path": "scripts/test-repeat-wire.js",
+      "size": 3678
+    },
+    {
+      "path": "scripts/test-repeat.js",
+      "size": 3504
+    },
+    {
+      "path": "scripts/test-reunion-live.js",
+      "size": 2589
+    },
+    {
+      "path": "scripts/test-roundtrip.js",
+      "size": 4045
+    },
+    {
+      "path": "scripts/test-sense-wire.js",
+      "size": 6539
+    },
+    {
+      "path": "scripts/test-sense.js",
+      "size": 5941
+    },
+    {
+      "path": "scripts/test-situation.js",
+      "size": 1069
+    },
+    {
+      "path": "scripts/test-sleep.js",
+      "size": 3874
+    },
+    {
+      "path": "scripts/test-state-migrate.js",
+      "size": 1140
+    },
+    {
+      "path": "scripts/test-sticker-e2e.js",
+      "size": 1548
+    },
+    {
+      "path": "scripts/test-sticker-live.js",
+      "size": 2082
+    },
+    {
+      "path": "scripts/test-stickers-live.js",
+      "size": 6172
+    },
+    {
+      "path": "scripts/test-stickers-wire.js",
+      "size": 8483
+    },
+    {
+      "path": "scripts/test-stickers.js",
+      "size": 6893
+    },
+    {
+      "path": "scripts/test-tone.js",
+      "size": 1394
+    },
+    {
+      "path": "scripts/test-vision.js",
+      "size": 1852
+    },
+    {
+      "path": "scripts/test-world.js",
+      "size": 1469
+    },
+    {
+      "path": "scripts/verify-qr.py",
+      "size": 1696
+    },
+    {
+      "path": "src/brain/client.js",
+      "size": 12998
+    },
+    {
+      "path": "src/brain/world-engine.js",
+      "size": 12208
+    },
+    {
+      "path": "src/channel/ilink.js",
+      "size": 8497
+    },
+    {
+      "path": "src/channel/media.js",
+      "size": 9364
+    },
+    {
+      "path": "src/channel/messages.js",
+      "size": 2775
+    },
+    {
+      "path": "src/companion.js",
+      "size": 43816
+    },
+    {
+      "path": "src/config.js",
+      "size": 8100
+    },
+    {
+      "path": "src/console/page.html",
+      "size": 42455
+    },
+    {
+      "path": "src/console/server.js",
+      "size": 13386
+    },
+    {
+      "path": "src/login.js",
+      "size": 8938
+    },
+    {
+      "path": "src/main.js",
+      "size": 5241
+    },
+    {
+      "path": "src/qrcode.js",
+      "size": 13194
+    },
+    {
+      "path": "src/soul/album.js",
+      "size": 3301
+    },
+    {
+      "path": "src/soul/commands.js",
+      "size": 3879
+    },
+    {
+      "path": "src/soul/deform.js",
+      "size": 8397
+    },
+    {
+      "path": "src/soul/forge.js",
+      "size": 13374
+    },
+    {
+      "path": "src/soul/longing.js",
+      "size": 5474
+    },
+    {
+      "path": "src/soul/mbti.js",
+      "size": 2853
+    },
+    {
+      "path": "src/soul/memory.js",
+      "size": 9334
+    },
+    {
+      "path": "src/soul/milestones.js",
+      "size": 4185
+    },
+    {
+      "path": "src/soul/persona.js",
+      "size": 27153
+    },
+    {
+      "path": "src/soul/portrait.js",
+      "size": 7296
+    },
+    {
+      "path": "src/soul/promises.js",
+      "size": 6154
+    },
+    {
+      "path": "src/soul/repeat.js",
+      "size": 5046
+    },
+    {
+      "path": "src/soul/sense.js",
+      "size": 8378
+    },
+    {
+      "path": "src/soul/sleep.js",
+      "size": 3262
+    },
+    {
+      "path": "src/soul/soul.js",
+      "size": 28142
+    },
+    {
+      "path": "src/soul/stickers.js",
+      "size": 9599
+    },
+    {
+      "path": "src/system/backup.js",
+      "size": 5895
+    },
+    {
+      "path": "test/core.test.js",
+      "size": 49295
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+# 运行数据（内含 API Key，绝不要提交）
+data/
+
+# 自动备份（是 data/ 的整份拷贝，同样含 API Key）
+backups/
+
+# 测试用的临时数据目录（同样是 data/ 的拷贝，跑测试时生成、跑完自动删）
+.test-data/
+.test-backups/
+
+# 参考仓库（第三方，交付时可整个删除）
+_reference/
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 系统
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini

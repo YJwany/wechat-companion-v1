@@ -1,0 +1,29 @@
+{
+  "name": "wechat-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "一个有性格、有生活的 AI 微信伴侣 —— 独立程序，走微信 iLink 官方机器人通道",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "once": "node src/main.js --once",
+    "login": "node src/main.js --login",
+    "login:gui": "node scripts/login-interactive.js",
+    "fetch:stickers": "node scripts/fetch-stickers.js",
+    "console": "node src/main.js --console",
+    "doctor": "node scripts/doctor.js",
+    "test": "node scripts/run-core-tests.js",
+    "test:all": "node scripts/run-all-tests.js",
+    "test:world": "node scripts/test-world.js",
+    "test:memory": "node scripts/test-memory-quality.js",
+    "test:live": "node scripts/test-live.js",
+    "eval:models": "node scripts/eval-models.js",
+    "pack": "node scripts/pack.js"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}
