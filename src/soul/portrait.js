@@ -107,6 +107,7 @@ export function buildPortraitPrompt({ persona, history = [], previous = null, su
     '- 可以用"好像""感觉""有时候"这类不确定的词，印象本来就是模糊的',
     `- 不超过 ${MAX_LEN} 字`,
     '- 只输出印象本身，不要任何前缀、标题或引号',
+    '- **直接写，不要复述上面的要求、不要解释你在做什么、不要列条目**',
   );
 
   if (previous?.text) {
@@ -119,6 +120,27 @@ export function buildPortraitPrompt({ persona, history = [], previous = null, su
   }
 
   return lines.join('\n');
+}
+
+/**
+ * 判断模型输出是不是"思考过程"而不是"印象"。
+ *
+ * 真踩到过：推理模型（deepseek-v4.1-flash）在写印象这种"元任务"时，
+ * 会把内部推理当成正文返回（"用户要求我扮演…根据设定…我需要…"）。
+ * 这段东西一旦写进 portrait.json，就会被注入系统提示词，
+ * 把之后的**每一次聊天**都绕晕 —— 她开始分析提示词，而不是回话。
+ * 宁可没有印象，也不要一段污染提示词的垃圾。
+ */
+const META_MARKERS = /(用户要求|用户说|被要求|要求我|按.{0,4}要求|根据设定|设定说|系统提示|system\s*prompt|我需要|让我先|题目要求|首先我|接下来我|这段.{0,6}是系统|对话回顾|最近的对话|只输出|不超过\s*\d+\s*字|\d\s*-\s*\d\s*句话)/i;
+
+export function looksLikeMeta(text) {
+  const t = String(text ?? '');
+  if (META_MARKERS.test(t)) return true;
+  // 印象是**一段自然的话**。出现列表符号或"要求/规则"这种标题，
+  // 基本就是把提示词复述了一遍（真踩过："我们被要求写一段…要求：- 写感觉到的…"）。
+  if (/(^|\s)[-*•]\s/.test(t)) return true;
+  if (/(要求|规则|任务)\s*[:：]/.test(t)) return true;
+  return false;
 }
 
 /** 清洗模型输出：去引号、去前缀、限长。 */
@@ -156,20 +178,44 @@ export async function updatePortrait({
     summary: history.summary ?? '',
   });
 
-  let raw;
-  try {
-    raw = await chat(cfg.brain, [
-      { role: 'system', content: `你叫${persona?.name ?? '她'}。用第一人称写你心里的感觉。` },
-      { role: 'user', content: prompt },
-    ], { temperature: 0.8, maxTokens: 220 });
-  } catch (err) {
-    logger?.('warn', `印象更新失败: ${err.message}`);
-    return { ok: false, reason: `模型调用失败: ${err.message}` };
+  // 最多试 2 次。实测这个模型约 1/3 的概率会把"思考/复述要求"当正文返回，
+  // 重试一次能把成功率从 ~2/3 提到 ~8/9。印象是长期资产，值得多花一次调用。
+  let text = '';
+  let reason = '';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let raw;
+    try {
+      raw = await chat(cfg.brain, [
+        { role: 'system', content: `你叫${persona?.name ?? '她'}。用第一人称写你心里的感觉，直接说，不要分析、不要复述任何要求。` },
+        { role: 'user', content: prompt },
+        // maxTokens 原来只有 220 —— 写"2-3 句话、200 字以内"的印象根本不够，
+        // 推理模型还会先花掉一截在思考上。预算不足时的表现不是报错，
+        // 而是**把提示词复述一遍当答案**（"我们被要求写一段…要求：- 写感觉到的…"），
+        // 这段垃圾一旦写进 portrait.json 就会污染之后的每一次聊天。给足余量。
+      ], { temperature: 0.8, maxTokens: 1600 });
+    } catch (err) {
+      logger?.('warn', `印象更新失败: ${err.message}`);
+      return { ok: false, reason: `模型调用失败: ${err.message}` };
+    }
+
+    const t = cleanPortrait(raw);
+    if (!t || t.length < 6) {
+      reason = '模型没写出有效内容';
+    } else if (looksLikeMeta(t)) {
+      // 推理模型把"思考过程"当正文返回 —— 写进去会污染系统提示词，宁可不写
+      reason = '模型返回的是思考过程';
+    } else {
+      text = t;
+      break;
+    }
+    if (attempt < 2) {
+      logger?.('debug', `印象生成不合格（${reason}），重试一次: ${t.slice(0, 30)}…`);
+    }
   }
 
-  const text = cleanPortrait(raw);
-  if (!text || text.length < 6) {
-    return { ok: false, reason: '模型没写出有效内容' };
+  if (!text) {
+    logger?.('warn', `印象生成失败，已丢弃（避免污染提示词）: ${reason}`);
+    return { ok: false, reason };
   }
 
   const portrait = {

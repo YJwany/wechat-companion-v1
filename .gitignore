@@ -11,6 +11,9 @@ backups/
 # 参考仓库（第三方，交付时可整个删除）
 _reference/
 
+# 打包产物（npm run pack 生成，是源码的副本，不必进版本库）
+dist/
+
 # 日志与临时文件
 *.log
 *.tmp

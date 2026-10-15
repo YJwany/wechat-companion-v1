@@ -576,8 +576,8 @@ ${recent}
     try {
       const raw = await chat(this.cfg.brain, [{ role: 'user', content: prompt }], {
         temperature: 0.2,
-        maxTokens: 200,
-        timeoutMs: 30_000,
+        maxTokens: 1000,
+        timeoutMs: 60_000,
       });
 
       const json = extractJson(raw);
@@ -660,15 +660,55 @@ ${topic ? `这次想发的主题：${topic}` : ''}
 
 const MOODS = ['平静', '有点闷', '莫名开心', '懒懒的', '心里空空的', '挺有精神', '想安静待着', '有点烦躁'];
 
-/** 从模型回复里抠出 JSON（有些模型会包 ```json 代码块）。 */
+/**
+ * 从模型回复里抠出 JSON。
+ *
+ * 推理模型（deepseek-v4.1-flash 这类）经常在 JSON 前后夹一大段"思考"，
+ * 而且爱用中文全角引号 —— 这两件事都会让 JSON.parse 直接失败。
+ * 所以：先归一化引号，再扫描所有"括号配平"的候选，返回第一个能解析的。
+ */
 function extractJson(text) {
-  const s = String(text ?? '').trim();
+  const s = String(text ?? '')
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'");
   const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
+  if (fenced) {
+    const hit = firstParsableJson(fenced[1]);
+    if (hit) return hit;
+  }
+  const hit = firstParsableJson(s);
+  if (hit) return hit;
   const start = s.indexOf('{');
   const end = s.lastIndexOf('}');
   if (start >= 0 && end > start) return s.slice(start, end + 1);
   return s;
+}
+
+/** 扫描字符串里所有"括号配平"的 {…} 片段，返回第一个能被 JSON.parse 的。 */
+function firstParsableJson(s) {
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '{') continue;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let j = i; j < s.length; j++) {
+      const c = s[j];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) {
+          const cand = s.slice(i, j + 1);
+          try { JSON.parse(cand); return cand; } catch { /* 试下一个起点 */ }
+          break;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /** 判断一条事实是否"重要"（进固化桶，基本不衰减）。 */

@@ -78,6 +78,8 @@ export async function chat(slot, messages, { timeoutMs = 120_000, temperature, m
     max_tokens: maxTokens ?? slot.maxTokens ?? 800,
   };
   if (jsonMode) body.response_format = { type: 'json_object' };
+  // 关掉推理模型的"思考"（只在配置了才传，兼容不认这个参数的模型）
+  if (slot.reasoningEffort) body.reasoning_effort = slot.reasoningEffort;
 
   // 本地 Ollama 不校验 key，但某些实现会因空 Authorization 报错，故仅在有时才带。
   const headers = { 'Content-Type': 'application/json' };
@@ -298,7 +300,8 @@ export async function visionDescribe(slot, { imageData, mime = 'image/jpeg', pro
     // 300 对"推理模型"太小：它先输出 reasoning_content（思考）也占 token，
     // 预算被思考吃光后 content 会是空的，看起来像"识图失败/结构异常"。
     // 给足余量，宁可多留也不让答案被挤掉。
-    max_tokens: slot.maxTokens ?? 1200,
+    max_tokens: slot.maxTokens ?? 3000,
+    ...(slot.reasoningEffort ? { reasoning_effort: slot.reasoningEffort } : {}),
   };
 
   const headers = { 'Content-Type': 'application/json' };

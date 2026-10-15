@@ -643,7 +643,9 @@ export class Companion {
     const now = new Date();
 
     // 1) 世界引擎：睡眠窗口内为明天写剧本
-    if (this.world.shouldGenerate(now)) {
+    //    加了冷却：模型不可用时它会每 5 分钟重试一次（一晚 66 次），非常烧 token
+    if (this.world.shouldGenerate(now) && this.worldCooldownOk(now)) {
+      this.worldMarkAttempt(now);
       this.log('info', '世界引擎开始为明天写剧本…');
       const r = await this.world.generateForTomorrow(now);
       if (r.ok) {
@@ -681,8 +683,27 @@ export class Companion {
    * 三个护栏（不然会出问题）：
    *   - 已有剧本 → 立即返回，绝不覆盖（今天已经过了一半，不能重写）
    *   - 深夜（>= 23 点）不补今天的 —— 这天快过完了，晚上的自动任务会写明天
-   *   - 失败冷却 30 分钟 —— 模型挂了不能每 5 分钟重试一次（一天 288 次）
+   *   - 失败冷却 2 小时 —— 模型挂了不能每 5 分钟重试一次（一天 288 次）
    */
+  /**
+   * 世界引擎的尝试冷却（默认 2 小时）。
+   *
+   * 为什么需要：模型不可用（比如它把预算全花在"思考"上）时，
+   * 夜间窗口内每 5 分钟就会重试一次 —— 一晚 66 次，纯烧 token。
+   */
+  worldCooldownOk(now = new Date(), hours = 2) {
+    const last = this.state.worldTodayAttemptAt
+      ? new Date(this.state.worldTodayAttemptAt).getTime()
+      : 0;
+    return !(Number.isFinite(last) && last > 0 && now.getTime() - last < hours * 3_600_000);
+  }
+
+  /** 记一次世界引擎的尝试时间。 */
+  worldMarkAttempt(now = new Date()) {
+    this.state.worldTodayAttemptAt = now.toISOString();
+    this.saveState();
+  }
+
   async ensureTodayScript(now = new Date()) {
     if (!this.cfg.world?.enabled) return;
 
@@ -691,15 +712,9 @@ export class Companion {
 
     if (now.getHours() >= 23) return; // 太晚，不补今天的
 
-    const lastAt = this.state.worldTodayAttemptAt
-      ? new Date(this.state.worldTodayAttemptAt).getTime()
-      : 0;
-    if (Number.isFinite(lastAt) && lastAt > 0 && now.getTime() - lastAt < 30 * 60_000) {
-      return; // 刚试过，冷却中
-    }
+    if (!this.worldCooldownOk(now)) return; // 刚试过，冷却中
 
-    this.state.worldTodayAttemptAt = now.toISOString();
-    this.saveState();
+    this.worldMarkAttempt(now);
 
     this.log('info', '今天还没有剧本，自动补写一次…');
     const r = await this.world.generateForTomorrow(now, { forDate: todayKey });

@@ -46,6 +46,9 @@ export const DEFAULT_CONFIG = {
     model: 'Qwen/Qwen2.5-7B-Instruct',
     temperature: 0.9,
     maxTokens: 800,
+    // 推理模型的"思考"开关：留空=不传该参数（兼容普通模型）；
+    // 设 'none' 可关掉思考 —— 快约 10 倍，且不会把思考内容当正文吐出来。
+    reasoningEffort: '',
   },
 
   // ── 世界引擎（每晚替她写"明天"）──
@@ -178,6 +181,7 @@ export function resolveVisionSlot(cfg) {
     baseUrl: v.baseUrl || b.baseUrl || '',
     apiKey: v.apiKey || b.apiKey || '',
     model: v.model || b.model || '',
+    reasoningEffort: v.reasoningEffort || b.reasoningEffort || '',
     degraded: !v.model,
   };
 }

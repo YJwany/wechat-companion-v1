@@ -216,6 +216,10 @@ npm run fetch:stickers
 
 ## 快速开始
 
+**前置条件：Node.js 20 或更高**（[下载](https://nodejs.org/)）。终端里能跑 `node --version`、显示 20 以上就行。
+
+**不需要 `npm install`** —— 本项目零依赖，没有 `node_modules`，拉下来就能跑。
+
 ```bash
 # 1. 体检（确认环境没问题）
 npm run doctor
@@ -526,4 +530,10 @@ pm2 restart wechat-companion # 重启
 
 MIT。
 
-本项目在**设计思路上**借鉴了开源项目 [Thalamus](https://github.com/Koierrr/Thalamus)（MIT）与 [dsh-plugin-wechat-bridge](https://github.com/NattoCB/dsh-plugin-wechat-bridge)（MIT，iLink 协议实现参考），代码为独立编写。参考仓库副本保留在 `_reference/`，交付时可按需删除。
+本项目在**设计思路上**借鉴了以下开源项目（均为 MIT 许可），代码为**独立编写**，未复制其源码：
+
+- [Thalamus](https://github.com/Koierrr/Thalamus) —— 长期记忆与"生活引擎"的设计取舍参考
+- [dsh-plugin-wechat-bridge](https://github.com/NattoCB/dsh-plugin-wechat-bridge) —— iLink 协议实现参考
+- [dsh-weixin-clawbot](https://github.com/xiixiixi/dsh-weixin-clawbot) —— 微信官方机器人通道参考
+
+开发时这三个仓库的副本放在 `_reference/`。**该目录不随仓库分发**（已在 `.gitignore` 中忽略），运行本项目也不需要它。

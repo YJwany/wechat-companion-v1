@@ -91,7 +91,10 @@ export class WorldEngine {
     let raw;
     try {
       raw = await chat(
-        { ...slot, temperature: 1.0, maxTokens: 1600 },
+        // 预算必须同时装下"思考"和"正文"：实测一次思考约 9000 字（≈4500 token），
+        // 加上 JSON 正文，completion 约 7000 token。给少了思考就把额度吃光，
+        // 正文挤不出来 —— 看起来像"返回的不是合法 JSON"。给足 16000 留余量。
+        { ...slot, temperature: 1.0, maxTokens: 16000 },
         [
           { role: 'system', content: '你是一个编剧。你只为给定的角色写下"这一天"，不评论、不解说、不破坏角色。只输出 JSON。' },
           { role: 'user', content: prompt },
@@ -122,7 +125,7 @@ export class WorldEngine {
       thoughts: String(parsed.thoughts ?? '').trim(),
       secret: String(parsed.secret ?? '').trim(),
       weather: weather ? `${weather.desc} ${weather.temp}℃` : String(parsed.weather ?? '').trim(),
-      npcs: normalizeNpcs(parsed.npcs),
+      npcs: mergeNpcs(normalizeNpcs(parsed.npcs), yesterday?.npcs),
     };
 
     this.state.scripts[target] = script;
@@ -150,10 +153,10 @@ export class WorldEngine {
     const w = this.cfg.world ?? {};
     const b = this.cfg.brain ?? {};
     if (w.baseUrl && w.model) {
-      return { baseUrl: w.baseUrl, apiKey: w.apiKey || b.apiKey, model: w.model, degraded: false };
+      return { baseUrl: w.baseUrl, apiKey: w.apiKey || b.apiKey, model: w.model, reasoningEffort: w.reasoningEffort || b.reasoningEffort || '', degraded: false };
     }
     // 降级：复用对话模型。功能完整，但违反"独立槽位"的设计意图，如实标注。
-    return { baseUrl: b.baseUrl, apiKey: b.apiKey, model: b.model, degraded: true };
+    return { baseUrl: b.baseUrl, apiKey: b.apiKey, model: b.model, reasoningEffort: b.reasoningEffort || '', degraded: true };
   }
 
   /** 只保留最近 60 天剧本，避免无限增长。 */
@@ -181,6 +184,11 @@ export class WorldEngine {
 /** 组装世界引擎的提示词。 */
 function buildWorldPrompt({ persona, weather, yesterday, targetDate }) {
   const dateLine = targetDate ? `【要为哪一天写】${targetDate}\n` : '';
+  // 昨天的人名要原样带过来 —— 不然模型每天给猫重新起名（橘仔→嘟嘟）
+  const prevNpcs = (yesterday?.npcs ?? []).filter((n) => n?.name);
+  const npcLine = prevNpcs.length
+    ? `\n【她生活里的人（**必须原样沿用，名字一个字都不能改，尤其是宠物**）】\n${prevNpcs.map((n) => `${n.name}（${n.relation}）`).join('、')}\n`
+    : '';
   return `为角色「${persona.name}」写下这一天。
 
 ${dateLine}【角色】
@@ -193,7 +201,7 @@ ${dateLine}【角色】
 说话风格：${persona.speechStyle}
 兴趣：${(persona.interests ?? []).join('、')}
 ${weather ? `明天真实天气：${weather.desc}，${weather.temp}℃，${weather.city}` : '（天气未知，请你合理编一个）'}
-${yesterday ? `\n【今天她过的一天】\n作息：${yesterday.wakeAt} 起 ${yesterday.sleepAt} 睡\n心情：${yesterday.mood}\n做了什么：${yesterday.flow}\n\n明天必须与今天延续（昨晚没睡好→明天没精神；今天生病→明天最多是好转）。` : ''}
+${yesterday ? `\n【今天她过的一天】\n作息：${yesterday.wakeAt} 起 ${yesterday.sleepAt} 睡\n心情：${yesterday.mood}\n做了什么：${yesterday.flow}\n${npcLine}\n明天必须与今天延续（昨晚没睡好→明天没精神；今天生病→明天最多是好转）。` : ''}
 
 【输出要求】
 只输出一个 JSON 对象，不要任何其他文字。字段如下：
@@ -212,7 +220,7 @@ ${yesterday ? `\n【今天她过的一天】\n作息：${yesterday.wakeAt} 起 $
 }
 
 【硬规则】
-- npcs 是她生活里的人，最多 6 个，保持稳定，不要每天换新名字。
+- npcs 是她生活里的人，最多 6 个。**如果上面给了"她生活里的人"，名字必须一字不改地沿用（尤其是宠物），绝对不许换名字**；只能在此基础上少量新增。
 - "flow" 里的地点和活动必须符合她的城市、职业和作息，不能出现她身份不该有的场景。
 - 她不能用手机以外的方式联系别人（不能说"我发朋友圈""我打电话"）。
 - 日记里不要出现"AI""模型""程序""生成"这类词，她不知道自己是被写出来的。`;
@@ -259,15 +267,55 @@ const WEATHER_CODE = {
   95: '雷阵雨', 96: '雷阵雨伴冰雹', 99: '强雷暴',
 };
 
-/** 从模型回复里抠出 JSON（有些模型会包 ```json 代码块）。 */
+/**
+ * 从模型回复里抠出 JSON。
+ *
+ * 推理模型（deepseek-v4.1-flash 这类）经常在 JSON 前后夹一大段"思考"，
+ * 而且爱用中文全角引号 —— 这两件事都会让 JSON.parse 直接失败。
+ * 所以：先归一化引号，再扫描所有"括号配平"的候选，返回第一个能解析的。
+ */
 function extractJson(text) {
-  const s = String(text ?? '').trim();
+  const s = String(text ?? '')
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'");
   const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
+  if (fenced) {
+    const hit = firstParsableJson(fenced[1]);
+    if (hit) return hit;
+  }
+  const hit = firstParsableJson(s);
+  if (hit) return hit;
   const start = s.indexOf('{');
   const end = s.lastIndexOf('}');
   if (start >= 0 && end > start) return s.slice(start, end + 1);
   return s;
+}
+
+/** 扫描字符串里所有"括号配平"的 {…} 片段，返回第一个能被 JSON.parse 的。 */
+function firstParsableJson(s) {
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '{') continue;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let j = i; j < s.length; j++) {
+      const c = s[j];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) {
+          const cand = s.slice(i, j + 1);
+          try { JSON.parse(cand); return cand; } catch { /* 试下一个起点 */ }
+          break;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function normalizeTime(value, fallback) {
@@ -275,6 +323,32 @@ function normalizeTime(value, fallback) {
   if (!m) return fallback;
   const h = Math.min(23, Math.max(0, Number(m[1])));
   return `${String(h).padStart(2, '0')}:${m[2]}`;
+}
+
+/**
+ * 把"模型今天给的人"和"昨天的人"合并。
+ *
+ * 为什么必须在代码层兜底：提示词里写了"不许改名"是**软约束**，模型经常不听 ——
+ * 实测猫从「橘仔」变成「嘟嘟」。真人不会把自家的猫改名，所以这里硬来：
+ *   - 以昨天的人为底，一个都不丢（"不能遗忘"）
+ *   - 同名的跳过
+ *   - 同类角色的（比如她的猫）不新增，避免"同一只猫出现两个名字"
+ *   - 允许真正的新人加入，总数不超过 6
+ */
+function mergeNpcs(fresh, prev) {
+  const prevList = Array.isArray(prev) ? prev.filter((n) => n?.name) : [];
+  if (!prevList.length) return fresh;
+
+  const out = prevList.map((n) => ({ name: n.name, relation: n.relation }));
+  const petLike = (s) => /猫|狗|宠物|柯基|橘|狸花|仓鼠|兔|鸟/.test(String(s ?? ''));
+  for (const n of fresh) {
+    if (!n?.name) continue;
+    if (out.some((o) => o.name === n.name)) continue;
+    if (petLike(n.relation) && out.some((o) => petLike(o.relation))) continue;
+    if (out.length >= 6) break;
+    out.push({ name: n.name, relation: n.relation });
+  }
+  return out;
 }
 
 function normalizeNpcs(list) {

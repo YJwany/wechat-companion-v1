@@ -326,16 +326,49 @@ export function buildSystemPrompt({
 }
 
 /**
+ * 把换行转成句末标点。
+ *
+ * 实测（2026-10-15）：模型经常用换行代替标点来表示"这几句分开说"，
+ * 实际发出的原文长这样 ——
+ *   "对呀，养了只橘猫叫橘仔\n之前提过的嘛，下班先撸它才有力气洗澡啦"
+ * 而**微信里一条消息带换行，客户端会显示成空行**（PC 上看着就是个空格）。
+ * 真人不会在一条消息里按回车，想分开说就直接发两条。
+ *
+ * 处理方式：行尾已有标点就保留，没有就补一个句号，再拼回一行。
+ * 拼完的文本带着句末标点进入正常的拆条流程 —— 于是模型"想分开发"
+ * 的意图正好被拆条逻辑实现成"连发几条"，而不是一条里塞个空行。
+ */
+function normalizeBreaks(text) {
+  const lines = String(text ?? '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (lines.length <= 1) return lines[0] ?? '';
+  return lines
+    .map((l, i) => {
+      const isLast = i === lines.length - 1;
+      return isLast || /[。！？?!…~，,、；;：:)）】」』]$/.test(l) ? l : `${l}。`;
+    })
+    .join('');
+}
+
+/**
  * 把一条回复按句拆成多条（模拟真人连发）。
  * 这是"人味"的关键细节之一。
  */
 export function splitIntoChunks(text, maxChunks = 3, verbosity = 50) {
-  const clean = String(text ?? '').trim();
+  const raw = String(text ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!raw) return [];
+
+  // 换行 = 模型明确的分条意图，先转成标点（见 normalizeBreaks）
+  const hasBreak = raw.includes('\n');
+  const clean = normalizeBreaks(raw);
   if (!clean) return [];
 
   // 极简回复不拆（按整条长度判断，不是按拆出来的片段 —— 否则
   // "一。二。三。" 这种每句很短的话会被误判成极简回复而整条留下）
-  if (clean.length <= 12) return [clean];
+  // 例外：带换行的说明模型本来就想分开说，不吃"极简"豁免。
+  if (!hasBreak && clean.length <= 12) return [clean];
 
   // 话痨度决定拆分上限
   const limit = verbosity >= 70 ? maxChunks : verbosity >= 40 ? Math.min(maxChunks, 2) : 1;
@@ -563,7 +596,14 @@ export function humanize(text) {
  * @returns {string}
  */
 export function normalizePunctuation(text) {
-  let s = String(text ?? '').trim();
+  // 兜底：残留的换行一律清掉。微信里换行 = 空行，很出戏。
+  // 正常路径已经在 splitIntoChunks 里处理过了，这里防漏 ——
+  // 主动消息、相册配文这些不走拆条，直接进 polishChunks。
+  let s = String(text ?? '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\n+/g, '，')
+    .replace(/，{2,}/g, '，')
+    .trim();
   if (!s) return '';
 
   // 先判断：整条只有标点、没有任何文字内容 → 直接丢弃
