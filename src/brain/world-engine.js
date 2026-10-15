@@ -184,7 +184,7 @@ export class WorldEngine {
 /** 组装世界引擎的提示词。 */
 function buildWorldPrompt({ persona, weather, yesterday, targetDate }) {
   const dateLine = targetDate ? `【要为哪一天写】${targetDate}\n` : '';
-  // 昨天的人名要原样带过来 —— 不然模型每天给猫重新起名（橘仔→嘟嘟）
+  // 昨天的人名要原样带过来 —— 不然模型每天给宠物重新起名
   const prevNpcs = (yesterday?.npcs ?? []).filter((n) => n?.name);
   const npcLine = prevNpcs.length
     ? `\n【她生活里的人（**必须原样沿用，名字一个字都不能改，尤其是宠物**）】\n${prevNpcs.map((n) => `${n.name}（${n.relation}）`).join('、')}\n`
@@ -329,7 +329,7 @@ function normalizeTime(value, fallback) {
  * 把"模型今天给的人"和"昨天的人"合并。
  *
  * 为什么必须在代码层兜底：提示词里写了"不许改名"是**软约束**，模型经常不听 ——
- * 实测猫从「橘仔」变成「嘟嘟」。真人不会把自家的猫改名，所以这里硬来：
+ * 实测宠物名每天都会换一个。真人不会把自家的猫改名，所以这里硬来：
  *   - 以昨天的人为底，一个都不丢（"不能遗忘"）
  *   - 同名的跳过
  *   - 同类角色的（比如她的猫）不新增，避免"同一只猫出现两个名字"
